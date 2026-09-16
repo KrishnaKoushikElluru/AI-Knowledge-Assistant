@@ -79,9 +79,6 @@ The primary project direction, architecture, feature selection, design decisions
 Claude was used for tasks including:
 - Implementing the RAG pipeline based on the selected architecture
 - Implementing the Streamlit interface
-- Adding source citations
-- Implementing multiple-document support
-- Implementing conversation history
 - Implementing caching and API-call minimization
 - Adding API usage instrumentation
 - Implementing graceful Gemini quota-error handling
