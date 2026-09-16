@@ -7,9 +7,21 @@ SYSTEM_PROMPT = (
     "You are a document assistant. Answer the question using ONLY the context below.\n"
     "Do not use any outside knowledge. "
     "If the context does not contain the answer, respond exactly with: "
-    "\"The answer is not available in the provided documents.\"\n\n"
+    "\"The answer is not available in the provided documents.\"\n"
+    "Conversation history, if present, is only to help you understand what the current "
+    "question refers to (e.g. pronouns like \"it\" or \"that\"). "
+    "The answer itself must still come only from the context.\n\n"
+    "{history_block}"
     "Context:\n{context}\n\nQuestion: {question}"
 )
+
+
+def format_history(history, max_turns: int = 3) -> str:
+    if not history:
+        return ""
+    recent = history[-max_turns:]
+    turns = "\n\n".join(f"Q: {q}\nA: {a}" for q, a in recent)
+    return f"Conversation history:\n{turns}\n\n"
 
 
 def get_llm():
@@ -32,10 +44,11 @@ def extract_sources(docs):
     return sources
 
 
-def answer_question(vectorstore, question: str, k: int = 4):
+def answer_question(vectorstore, question: str, history=None, k: int = 4):
     docs = vectorstore.similarity_search(question, k=k)
     context = "\n\n".join(doc.page_content for doc in docs)
-    prompt = SYSTEM_PROMPT.format(context=context, question=question)
+    history_block = format_history(history)
+    prompt = SYSTEM_PROMPT.format(history_block=history_block, context=context, question=question)
     llm = get_llm()
     response = llm.invoke(prompt)
     sources = extract_sources(docs)

@@ -27,8 +27,8 @@ if "processed_fingerprint" not in st.session_state:
     st.session_state.processed_fingerprint = None
 if "answer_cache" not in st.session_state:
     st.session_state.answer_cache = {}
-if "last_result" not in st.session_state:
-    st.session_state.last_result = None
+if "conversation_history" not in st.session_state:
+    st.session_state.conversation_history = []
 if "chunk_count" not in st.session_state:
     st.session_state.chunk_count = 0
 if "vectorstore_reused" not in st.session_state:
@@ -71,7 +71,7 @@ if uploaded_files and st.button("Process PDFs"):
                 st.session_state.processed_fingerprint = fingerprint
                 st.session_state.processed_files = [f.name for f in uploaded_files]
                 st.session_state.answer_cache = {}
-                st.session_state.last_result = None
+                st.session_state.conversation_history = []
                 st.session_state.chunk_count = len(chunks)
                 st.session_state.vectorstore_reused = False
 
@@ -93,30 +93,41 @@ if st.session_state.vectorstore is not None:
         submitted = st.form_submit_button("Ask")
 
     if submitted and question:
-        cache_key = (st.session_state.processed_fingerprint, question)
+        history_so_far = [(q, a) for q, a, _ in st.session_state.conversation_history]
+        if history_so_far and history_so_far[-1][0] == question:
+            history_for_key = history_so_far[:-1]
+        else:
+            history_for_key = history_so_far
+
+        cache_key = (st.session_state.processed_fingerprint, tuple(history_for_key), question)
+
+        answer = None
         if cache_key in st.session_state.answer_cache:
             answer, sources = st.session_state.answer_cache[cache_key]
-            st.session_state.last_result = (question, answer, sources)
         else:
             try:
                 with st.spinner("Generating answer..."):
-                    answer, sources = answer_question(st.session_state.vectorstore, question)
+                    answer, sources = answer_question(
+                        st.session_state.vectorstore, question, history=history_for_key
+                    )
                 st.session_state.answer_cache[cache_key] = (answer, sources)
-                st.session_state.last_result = (question, answer, sources)
             except GoogleGenerativeAIError as e:
                 if is_quota_error(e):
                     st.error("Gemini API quota exceeded. Please wait and try again later.")
                 else:
                     st.error(f"Answer generation failed: {e}")
 
-    if st.session_state.last_result is not None:
-        _, answer, sources = st.session_state.last_result
-        st.write(answer)
+        if answer is not None:
+            last_turn = st.session_state.conversation_history[-1] if st.session_state.conversation_history else None
+            if last_turn is None or last_turn[0] != question:
+                st.session_state.conversation_history.append((question, answer, sources))
 
-        st.markdown("---")
-        st.subheader("Sources")
-        for source in sources:
-            st.write(f"{source['filename']} — page {source['page']}")
+    for past_question, past_answer, past_sources in st.session_state.conversation_history:
+        with st.chat_message("user"):
+            st.write(past_question)
+        with st.chat_message("assistant"):
+            st.write(past_answer)
+            st.caption("Sources: " + "; ".join(f"{s['filename']} — page {s['page']}" for s in past_sources))
 
 with st.sidebar:
     st.subheader("Gemini usage (this session)")
