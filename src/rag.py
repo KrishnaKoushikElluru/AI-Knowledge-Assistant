@@ -3,8 +3,10 @@ import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 SYSTEM_PROMPT = (
-    "Answer the question using only the context below. "
-    "If the answer is not in the context, say you don't know.\n\n"
+    "You are a document assistant. Answer the question using ONLY the context below.\n"
+    "Do not use any outside knowledge. "
+    "If the context does not contain the answer, respond exactly with: "
+    "\"The answer is not available in the provided documents.\"\n\n"
     "Context:\n{context}\n\nQuestion: {question}"
 )
 
