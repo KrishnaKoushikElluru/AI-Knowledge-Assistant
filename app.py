@@ -35,5 +35,10 @@ if st.session_state.vectorstore is not None:
     question = st.text_input("Ask a question about the document")
     if question:
         with st.spinner("Generating answer..."):
-            answer, _ = answer_question(st.session_state.vectorstore, question)
+            answer, sources = answer_question(st.session_state.vectorstore, question)
         st.write(answer)
+
+        st.markdown("---")
+        st.subheader("Sources")
+        for source in sources:
+            st.write(f"{source['filename']} — page {source['page']}")

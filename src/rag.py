@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -18,10 +19,24 @@ def get_llm():
     )
 
 
+def extract_sources(docs):
+    sources = []
+    seen = set()
+    for doc in docs:
+        filename = Path(doc.metadata.get("source", "unknown")).name
+        page = doc.metadata.get("page_label") or doc.metadata.get("page", 0) + 1
+        key = (filename, page)
+        if key not in seen:
+            seen.add(key)
+            sources.append({"filename": filename, "page": page})
+    return sources
+
+
 def answer_question(vectorstore, question: str, k: int = 4):
     docs = vectorstore.similarity_search(question, k=k)
     context = "\n\n".join(doc.page_content for doc in docs)
     prompt = SYSTEM_PROMPT.format(context=context, question=question)
     llm = get_llm()
     response = llm.invoke(prompt)
-    return response.content, docs
+    sources = extract_sources(docs)
+    return response.content, sources
