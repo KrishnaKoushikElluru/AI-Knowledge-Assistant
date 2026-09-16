@@ -10,7 +10,7 @@ from src.ingest import load_and_chunk_pdfs
 from src.vectorstore import build_vectorstore
 from src.rag import answer_question
 
-load_dotenv("secret.env")
+load_dotenv("secret.env", override=True)
 
 INDEX_PATH = Path("vectorstore/faiss_index")
 

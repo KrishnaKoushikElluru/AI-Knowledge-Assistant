@@ -15,7 +15,7 @@ SYSTEM_PROMPT = (
 def get_llm():
     return ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
-        google_api_key=os.environ["GEMINI_API_KEY"],
+        google_api_key=os.environ["GOOGLE_API_KEY"],
     )
 
 
