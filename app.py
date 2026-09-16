@@ -9,8 +9,10 @@ from langchain_google_genai._common import GoogleGenerativeAIError
 from src.ingest import load_and_chunk_pdfs
 from src.vectorstore import build_vectorstore
 from src.rag import answer_question
+from src import metrics
 
 load_dotenv("secret.env", override=True)
+metrics.instrument()
 
 INDEX_PATH = Path("vectorstore/faiss_index")
 
@@ -27,6 +29,10 @@ if "answer_cache" not in st.session_state:
     st.session_state.answer_cache = {}
 if "last_result" not in st.session_state:
     st.session_state.last_result = None
+if "chunk_count" not in st.session_state:
+    st.session_state.chunk_count = 0
+if "vectorstore_reused" not in st.session_state:
+    st.session_state.vectorstore_reused = None
 
 
 def is_quota_error(exc) -> bool:
@@ -44,6 +50,7 @@ if uploaded_files and st.button("Process PDFs"):
     )
 
     if already_processed:
+        st.session_state.vectorstore_reused = True
         st.info("These documents are already processed. Reusing the existing vector store.")
     else:
         temp_paths = []
@@ -65,6 +72,8 @@ if uploaded_files and st.button("Process PDFs"):
                 st.session_state.processed_files = [f.name for f in uploaded_files]
                 st.session_state.answer_cache = {}
                 st.session_state.last_result = None
+                st.session_state.chunk_count = len(chunks)
+                st.session_state.vectorstore_reused = False
 
             st.success(f"Processed {len(chunks)} chunks from {len(uploaded_files)} document(s).")
         except GoogleGenerativeAIError as e:
@@ -108,3 +117,10 @@ if st.session_state.vectorstore is not None:
         st.subheader("Sources")
         for source in sources:
             st.write(f"{source['filename']} — page {source['page']}")
+
+with st.sidebar:
+    st.subheader("Gemini usage (this session)")
+    st.write(f"Embedding API calls: {metrics.counters['embedding_calls']}")
+    st.write(f"Generation API calls: {metrics.counters['generation_calls']}")
+    st.write(f"Chunks indexed: {st.session_state.chunk_count}")
+    st.write(f"Last processing reused cache: {st.session_state.vectorstore_reused}")
