@@ -72,11 +72,35 @@ Python, LangChain, Google Gemini (`gemini-2.5-flash` for generation, `gemini-emb
 
 ## AI Tools Used
 
-This project was built with **Claude** (Anthropic, Claude Code) as a pair-programming assistant throughout — not as a one-shot generator. Specifically, Claude was used to:
-- Scaffold the initial project structure and dependencies
-- Implement each feature increment (core RAG pipeline, citations, multi-document support, conversation history, API-call minimization)
-- Diagnose and fix real bugs encountered during development: outdated Gemini model names from initial scaffolding, a stale-API-key bug caused by `load_dotenv`'s non-override default combined with Streamlit's long-lived server process, and a cache-key bug (discovered via testing) where naive history-aware caching would never hit on repeated questions
-- Write and run mocked test suites (using Streamlit's `AppTest` harness and `unittest.mock`) to verify behavior — submit-gating, caching correctness, and quota-error handling — without consuming real Gemini API quota
-- Diagnose real Gemini API usage (why a given test run made a specific number of requests) by instrumenting the actual SDK call boundary
+This project was developed with Claude (Anthropic, Claude Code) as a pair-programming and implementation assistant.
 
-I reviewed, tested, and understood every change before committing it, and can walk through the reasoning behind each design decision (documented above) in Round 2.
+The primary project direction, architecture, feature selection, design decisions, testing requirements, and trade-offs were determined and reviewed by me. Claude was used to assist with implementation, debugging, testing, and code refinement.
+
+Claude was used for tasks including:
+- Implementing the RAG pipeline based on the selected architecture
+- Implementing the Streamlit interface
+- Adding source citations
+- Implementing multiple-document support
+- Implementing conversation history
+- Implementing caching and API-call minimization
+- Adding API usage instrumentation
+- Implementing graceful Gemini quota-error handling
+- Debugging implementation issues
+- Writing and running mocked tests
+- Performing regression testing
+- Assisting with code cleanup and incremental development
+
+Key design decisions made during development included:
+- Selecting the RAG-based approach for the assignment
+- Choosing LangChain, Gemini, FAISS, and Streamlit
+- Designing the grounded-answer and refusal behavior
+- Preserving document metadata for source citations
+- Supporting multiple PDF documents
+- Designing conversation history without an additional history-summarization LLM call
+- Prioritizing API-call minimization and caching
+- Using explicit user submission to trigger generation
+- Configuring environment loading with `load_dotenv(..., override=True)` to ensure the intended API-key configuration is used
+- Testing the system against real documents and deliberate out-of-scope questions
+- Validating API usage through instrumentation and mocked tests
+
+I reviewed and tested the implemented changes throughout development and can explain the architecture, implementation, trade-offs, and design decisions during the next round.
