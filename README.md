@@ -64,11 +64,16 @@ Python, LangChain, Google Gemini (`gemini-2.5-flash` for generation, `gemini-emb
 
 **Batching:** Gemini's embedding endpoint caps requests at 100 texts. LangChain batches at that limit automatically — verified experimentally (76 chunks → 1 request, 140 chunks → 2 requests) rather than assumed. Processing 2 real-world PDFs can therefore cost 1 or 2 embedding requests depending on total chunk count; this is the API's own hard limit, not an inefficiency in the code.
 
+## Retrieval Evaluation
+
+`evaluate.py` runs a 21-question evaluation (5 per document across all 4 test PDFs, plus 1 deliberate out-of-scope question) measuring retrieval recall@4 and answer correctness. Full results are in [EVALUATION.md](EVALUATION.md): **retrieval recall@4 was 20/20**, and **answer correctness was 18/21**.
+
+This script runs against a local Ollama model (`llama3.2` + `nomic-embed-text`, see `requirements-eval.txt`) rather than Gemini — it's a local-only evaluation tool, kept separate from the deployed app so it never touches production quota. The 3 answer misses were genuinely informative rather than retrieval failures: retrieval found the correct source document in all 3 cases, but the smaller local model occasionally conflated a similarly-worded heading with the actual answer, dropped a specific detail in favor of a vaguer paraphrase, or refused to answer despite the correct context being present. This is a real illustration of why grounding needs both correct retrieval *and* a capable-enough model to actually read the retrieved context well — Gemini did not exhibit this refusal behavior in the manual testing done throughout development.
+
 ## Known Limitations
 
 - Follow-up-question retrieval can be imprecise for very vague references, as described above — a conscious tradeoff against extra API calls, not an oversight.
 - The Gemini free tier used during development caps at 5 generation requests/minute; rapid-fire testing can hit this (handled gracefully in the UI, not a crash).
-- No formal retrieval evaluation (e.g. precision/recall against a labeled question set) was built — testing was manual/targeted (in-scope vs. out-of-scope questions, multi-document source attribution, cache-correctness scenarios) rather than a systematic evaluation harness, given the assignment timeframe.
 
 ## AI Tools Used
 
