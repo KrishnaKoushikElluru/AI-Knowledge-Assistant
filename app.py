@@ -16,8 +16,29 @@ metrics.instrument()
 
 INDEX_PATH = Path("vectorstore/faiss_index")
 
-st.title("Mini AI Knowledge Assistant")
-st.write("Upload one or more PDFs and ask questions about them.")
+st.set_page_config(page_title="Mini AI Knowledge Assistant", page_icon="📚", layout="centered")
+
+st.markdown(
+    """
+    <style>
+    .stButton > button, .stFormSubmitButton > button {
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    div[data-testid="stFileUploaderDropzone"] {
+        border-radius: 10px;
+    }
+    div[data-testid="stChatMessage"] {
+        border-radius: 10px;
+    }
+    h1 { font-weight: 700; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.title("📚 Mini AI Knowledge Assistant")
+st.caption("Ask questions about your PDFs — every answer is grounded strictly in the documents you upload, with sources cited.")
 
 if "vectorstore" not in st.session_state:
     st.session_state.vectorstore = None
@@ -40,9 +61,10 @@ def is_quota_error(exc) -> bool:
     return "RESOURCE_EXHAUSTED" in text or "429" in text
 
 
-uploaded_files = st.file_uploader("Upload PDFs", type="pdf", accept_multiple_files=True)
+st.subheader("1. Knowledge base")
+uploaded_files = st.file_uploader("Upload PDFs", type="pdf", accept_multiple_files=True, label_visibility="collapsed")
 
-if uploaded_files and st.button("Process PDFs"):
+if uploaded_files and st.button("Process PDFs", type="primary", use_container_width=True):
     fingerprint = tuple(sorted((f.name, f.size) for f in uploaded_files))
     already_processed = (
         fingerprint == st.session_state.processed_fingerprint
@@ -86,11 +108,21 @@ if uploaded_files and st.button("Process PDFs"):
                 Path(path).unlink()
 
 if st.session_state.vectorstore is not None:
-    st.caption("Knowledge base: " + ", ".join(st.session_state.processed_files))
+    st.success(f"📁 Knowledge base ready — {', '.join(st.session_state.processed_files)}")
+else:
+    st.info("Upload one or more PDFs to build your knowledge base.")
+
+if st.session_state.vectorstore is not None:
+    st.divider()
+    st.subheader("2. Ask a question")
 
     with st.form("ask_form"):
-        question = st.text_input("Ask a question about the documents")
-        submitted = st.form_submit_button("Ask")
+        question = st.text_input(
+            "Your question",
+            placeholder="e.g. What is the submission deadline?",
+            label_visibility="collapsed",
+        )
+        submitted = st.form_submit_button("Ask →", type="primary", use_container_width=True)
 
     if submitted and question:
         history_so_far = [(q, a) for q, a, _ in st.session_state.conversation_history]
@@ -122,16 +154,25 @@ if st.session_state.vectorstore is not None:
             if last_turn is None or last_turn[0] != question:
                 st.session_state.conversation_history.append((question, answer, sources))
 
-    for past_question, past_answer, past_sources in st.session_state.conversation_history:
-        with st.chat_message("user"):
-            st.write(past_question)
-        with st.chat_message("assistant"):
-            st.write(past_answer)
-            st.caption("Sources: " + "; ".join(f"{s['filename']} — page {s['page']}" for s in past_sources))
+    if st.session_state.conversation_history:
+        st.divider()
+        st.subheader("Conversation")
+        for past_question, past_answer, past_sources in reversed(st.session_state.conversation_history):
+            with st.container(border=True):
+                with st.chat_message("user"):
+                    st.write(past_question)
+                with st.chat_message("assistant"):
+                    st.write(past_answer)
+                    if past_sources:
+                        st.caption(
+                            "📎 Sources: " + "; ".join(f"{s['filename']} — page {s['page']}" for s in past_sources)
+                        )
 
 with st.sidebar:
-    st.subheader("Gemini usage (this session)")
-    st.write(f"Embedding API calls: {metrics.counters['embedding_calls']}")
-    st.write(f"Generation API calls: {metrics.counters['generation_calls']}")
-    st.write(f"Chunks indexed: {st.session_state.chunk_count}")
-    st.write(f"Last processing reused cache: {st.session_state.vectorstore_reused}")
+    st.subheader("Session usage")
+    col1, col2 = st.columns(2)
+    col1.metric("Embedding calls", metrics.counters["embedding_calls"])
+    col2.metric("Generation calls", metrics.counters["generation_calls"])
+    st.divider()
+    st.metric("Chunks indexed", st.session_state.chunk_count)
+    st.caption(f"Last processing reused cache: {st.session_state.vectorstore_reused}")
