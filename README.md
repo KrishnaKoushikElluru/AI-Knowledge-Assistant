@@ -85,8 +85,6 @@ Claude was used for tasks including:
 - Implementing the RAG pipeline based on the selected architecture
 - Implementing the Streamlit interface
 - Implementing caching and API-call minimization
-- Adding API usage instrumentation
-- Implementing graceful Gemini quota-error handling
 - Debugging implementation issues
 - Writing and running mocked tests
 - Performing regression testing
